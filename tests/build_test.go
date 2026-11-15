@@ -20,6 +20,12 @@ func TestOtherParserRefused(t *testing.T) {
 	os.Mkdir(filepath.Join(dir, "kingpin"), 0o755)
 	writeFile(t, dir, "kingpin/go.mod", "module github.com/alecthomas/kingpin/v2\n\ngo 1.22\n")
 	writeFile(t, dir, "kingpin/kingpin.go", "package kingpin\n\n// Parse is a stand-in.\nfunc Parse() {}\n")
+	// Vendor the local stand-in so the fixture also works with GOFLAGS=-mod=vendor.
+	vendor := exec.Command("go", "mod", "vendor")
+	vendor.Dir = dir
+	if out, err := vendor.CombinedOutput(); err != nil {
+		t.Fatalf("go mod vendor: %v\n%s", err, out)
+	}
 	r := runTool(t, nil, "--pkg", dir, "--", "--source=service")
 	if r.code != 2 || r.stdout != "" || !strings.Contains(r.stderr, "imports github.com/alecthomas/kingpin/v2, a command-line parser flaggap doesn't read") {
 		t.Errorf("exit %d\n%s%s", r.code, r.stdout, r.stderr)
